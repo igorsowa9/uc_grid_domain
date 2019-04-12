@@ -170,27 +170,26 @@ def sqlquery_control_movetohistorian(node_id,injection_id):
     SQLtext += " WHERE node_id='" + str(node_id) + "' AND injection_id ='" + str(injection_id) + "' " 
     SQLtext += " AND control_type= '"+ str(control_type) + "');"
     return SQLtext
-	# rearranged so that it insert and delete one by one
-	
-def sqlquery_pmu_measurement_write(table, device_id, timestamp, value):
-    """
-    Writes measurement values to the DB.
-    -1- Measurements are taken from RTDS and written to RTDS as defined in settings_fromRTDS.
 
-    :param mtype: 1-33, 28-Pup, 29-Plow, 30-Qup, 31-Qlow
-    :param phase:
-    :param id:
-    :param time1:
-    :param measurementvalue:
-    :param accuracyvalue:
-    :return: sql query
-    """
-    table = str(table)
-    timestamp = str(timestamp)
-    value = str(value)
 
+def sqlquery_pmu_write(device_id, timestamp, value):
+    """
+    Created quesry writes PMU measurement (8 channels) values to the DB.
+    """
     SQLtext = ""
-    SQLtext += "INSERT INTO "+table+" (device_id, ts, value) VALUES ('"+device_id+"', '"+timestamp+"', '"+value+"');"
+    SQLtext += "INSERT INTO pmu001 (device_id, phasor_ts, value, db_writing_ts) "
+    SQLtext += "VALUES ('"+str(device_id)+"', '"+str(timestamp)+"', '"+str(value)+"', (now() at time zone 'utc') );"
+    return SQLtext
+
+
+def sqlquery_rtds_write(device_name, device_id, value1, value2, value3, dt_measurement):
+    """
+    Same like above but for RTDS data.
+    """
+    SQLtext = ""
+    SQLtext += "INSERT INTO rtds_devices (device_name, device_id, value1, value2, value3, value_ts, db_writing_ts) "
+    SQLtext += "VALUES ('" + str(device_name) + "', '" + str(device_id) + "', '" + str(value1) + "', '" + str(value2) \
+               + "', '" + str(value3) + "', '" + str(dt_measurement) + "', (now() at time zone 'utc') ); "
     return SQLtext
 
 

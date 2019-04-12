@@ -4,7 +4,7 @@ import time
 import sys, os
 import psycopg2
 from datetime import datetime
-from sql_queries import sqlquery_pmu_measurement_write
+from sql_queries import sqlquery_pmu_write
 import json
 from settings import *
 
@@ -14,7 +14,7 @@ def db_connection(dbname):
         global conn
         conn = psycopg2.connect("dbname='" + dbname + "' user='postgres' host='localhost' password='postgres'")
         print("DB: " + dbname + " connected.")
-        return(conn)
+        return conn
     except:
         print("I am unable to connect to the database. STOP.")
         sys.exit(0)
@@ -29,13 +29,13 @@ def message_handler(message_decoded, userdata):
     except json.decoder.JSONDecodeError as e:
         message = None
 
-    phasor_dt = message["ts"]
-    dt_object = datetime.strptime(phasor_dt, '%Y-%m-%d %H:%M:%S.%f')
+    phasor_ts = message["ts"]
+    phasor_ts_dt = datetime.strptime(phasor_ts, '%Y-%m-%d %H:%M:%S.%f')
 
-    # insert query and delete older tuples then 1 minute according to upc time
-    postgres_query = sqlquery_pmu_measurement_write("pmu001", userdata, dt_object, message["magnitude"])
+    # INSERT query and DELETE older tuples then X minutes according to upc time
+    postgres_query = sqlquery_pmu_write(userdata, phasor_ts_dt, message["magnitude"])
     postgres_query += "; "
-    postgres_query += "DELETE FROM pmu001 WHERE ts < (now() at time zone 'utc')-'1 minute'::interval;"
+    postgres_query += "DELETE FROM pmu001 WHERE phasor_ts < (now() at time zone 'utc')-'1 minutes'::interval;"
 
     conn = db_connection(dbname)
     cursor = conn.cursor()
@@ -55,15 +55,11 @@ def message_handler(message_decoded, userdata):
 
 def on_message_control(client, userdata, message):
 
-    controller_utc = datetime.utcnow()
-
     message_decoded = message.payload.decode("utf-8")
     message_handler(message_decoded, userdata)
 
 
 def receive_pmu_data(loopt):
-
-    broker_ip = "10.12.0.1"
 
     vm = mqttcli.Client(userdata="pmu001")
     vm.connect(broker_ip)
@@ -86,3 +82,6 @@ def receive_pmu_data(loopt):
 def receive_repeatedly():
     while True:
         receive_pmu_data(10)
+
+
+receive_repeatedly()
